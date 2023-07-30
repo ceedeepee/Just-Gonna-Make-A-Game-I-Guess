@@ -1,0 +1,29 @@
+ ___        __       
+|_ _|_ __  / _| ___  
+ | || '_ \| |_ / _ \ 
+ | || | | |  _| (_) |
+|___|_| |_|_|  \___/ 
+
+-- #### How_it_Works "Example" scene ......
+
+*First you have the spritesheet of all characters into "./Resources/ Number of character[0-100]/"
+*You have the animations of all characters into "./Resources/Animations/ Number of character[0-100]/"
+
+1º Basically when you clone a character ("Return")... one prefab is instantiated ("./Resources/0") this prefab is the base prefab.
+		-The character will be instantiated on "UnderGround/InstancePoint" transform.position, he starts walking and will stop when trigger with "KillPoint".
+		-When the character is on stop mode... now you can kill him.
+2º The animator of this prefab is modified with the animations of the selected character.
+3º When you kill this character, the new animator will call the dying animation of this character.
+
+About more important scripts:
+
+MainCamera / "Main_Controller.cs" 
+		*-Select the character to clone.
+		*-Select death mode to kill the character.
+
+Cloned character / "Custom_Animator.cs"
+		*-Modify the animator with the new animations of the selected character.
+
+You have contact info on "Pack/ Contact_Info.txt"
+
+
