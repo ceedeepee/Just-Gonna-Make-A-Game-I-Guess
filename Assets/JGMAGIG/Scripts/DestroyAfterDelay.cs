@@ -23,20 +23,21 @@ public class DestroyAfterDelay : MonoBehaviour
         Destroy(gameObject);
     }
 
-    private void OnTriggerEnter2D(Collider col)
-    {
-        if(col.gameObject.tag == "Obstacle")
-        {
-            col.gameObject.SendMessage("blowUp");
-            Destroy(gameObject);
-        }
-    }
+    // private void OnTriggerEnter2D(Collider col)
+    // {
+    //     if(col.gameObject.tag == "Obstacle")
+    //     {
+    //         col.gameObject.SendMessage("blowUp");
+    //         Destroy(gameObject);
+    //     }
+    // }
     private void OnCollisionEnter2D(Collision2D col)
     {
         if(col.gameObject.tag == "Ground" || col.gameObject.tag == "Obstacle")
         {
             gameObject.GetComponent<Collider2D>().enabled = false;
             gameObject.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezeAll; 
+            Debug.Log("Collided with ground or obstacle - Enter!");
         }
     }
     private void OnCollisionExit2D(Collision2D col)
@@ -44,7 +45,8 @@ public class DestroyAfterDelay : MonoBehaviour
         if(col.gameObject.tag == "Ground" || col.gameObject.tag == "Obstacle")
         {
             gameObject.GetComponent<Collider2D>().enabled = true;
-            gameObject.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.None; 
+            gameObject.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.None;
+            Debug.Log("Collided with ground or obstacle - Exit!");
         }
     }
     

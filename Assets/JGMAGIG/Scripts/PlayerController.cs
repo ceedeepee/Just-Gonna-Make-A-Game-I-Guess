@@ -27,6 +27,8 @@ public class PlayerController : MonoBehaviour
     public float distanceTraveled = 0;
     public TMP_Text distanceText;
     public TMP_Text hudScureText;
+    public AudioClip gunshot, jumpSound, landSound;
+    public AudioSource audioSource;
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -41,10 +43,10 @@ public class PlayerController : MonoBehaviour
         // Check if the player has stopped moving after game start.
         if (gameStarted && Mathf.Abs(rb.velocity.x) < 0.1f && Time.time > lastTimeMoving + 0.2f)
         {
-            deathReason = "Stopped moving!";
+            deathReason = "Eaten By Clown!";
             gameOver = true;
             
-            Debug.Log("Game over because player stopped moving.");  // Debug print
+            Debug.Log("Game over because player got eaten.");  // Debug print
         }
 
         // Check if the player has fallen off the platform.
@@ -57,10 +59,10 @@ public class PlayerController : MonoBehaviour
         }// Check if the player has stopped moving vertically.
         if (gameStarted && Mathf.Abs(rb.velocity.y) < 0.01f && Time.time > lastTimeMoving + 0.2f)
         {
-            deathReason = "Stuck on a platform side!";
+            deathReason = "Eaten By Clown!";
             gameOver = true;
     
-            Debug.Log("Game over because player got stuck on a platform side.");  // Debug print
+            Debug.Log("Game over because player got Eaten By Clown!");  // Debug print
         }
 
     }
@@ -79,8 +81,10 @@ public class PlayerController : MonoBehaviour
         
             lastPosition = transform.position;
             rb.velocity = new Vector2(speed, rb.velocity.y);
-            if ((Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)) && (!isJumping || canDoubleJump))
+
+            if ((Input.GetKeyDown(KeyCode.Space) || (Input.GetMouseButtonDown(0) && !IsPointerOverUIObject())) && (!isJumping || canDoubleJump))
             {
+                audioSource.PlayOneShot(jumpSound);
                 gameStarted = true;
                 if (isJumping && canDoubleJump)
                 {
@@ -141,6 +145,7 @@ public class PlayerController : MonoBehaviour
     public Transform barrel;
     public void ShootProjectile()
     {
+        audioSource.PlayOneShot(gunshot);
         // Instantiate the projectile Prefab at the player's location and add a forward force to its Rigidbody2D
         GameObject projectile = Instantiate(projectilePrefab, barrel.position, Quaternion.identity);
         Rigidbody2D projectileRb = projectile.GetComponent<Rigidbody2D>();
@@ -154,6 +159,7 @@ public class PlayerController : MonoBehaviour
         {
             isJumping = false;
             canDoubleJump = true;
+            //audioSource.PlayOneShot(landSound);
         }
         if (collision.gameObject.CompareTag("EnemyProjectile"))
         {
@@ -168,6 +174,26 @@ public class PlayerController : MonoBehaviour
             
         }
     }    
+    private bool IsPointerOverUIObject()
+    {
+        if (Application.platform == RuntimePlatform.Android || Application.platform == RuntimePlatform.IPhonePlayer)
+        {
+            Touch myTouch = Input.GetTouch(0);
+
+            if (myTouch.phase == TouchPhase.Began)
+            {
+                return UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(myTouch.fingerId);
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
+        }
+    }
     void OnTriggerEnter2D(Collider2D collision)
     {
         // Check if the player has been hit by an enemy projectile

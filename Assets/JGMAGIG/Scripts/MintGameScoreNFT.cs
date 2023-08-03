@@ -7,6 +7,15 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Runtime.Serialization.Json;
 using System.Text;
+using Solana.Unity.Metaplex.NFT.Library;
+using Solana.Unity.Metaplex.Utilities;
+using Solana.Unity.Programs;
+using Solana.Unity.Rpc;
+using Solana.Unity.Rpc.Builders;
+using Solana.Unity.Rpc.Core.Http;
+using Solana.Unity.Rpc.Messages;
+using Solana.Unity.Rpc.Models;
+using Solana.Unity.SDK;
 
 public class MintGameScoreNFT : MonoBehaviour
 {
@@ -15,6 +24,7 @@ public class MintGameScoreNFT : MonoBehaviour
     
     // Player controller reference
     public PlayerController playerController;
+    private static readonly IRpcClient rpcClient = ClientFactory.GetClient(Cluster.MainNet);
 
     // Server endpoint for metadata upload
     private string serverUploadEndpoint = "https://your-server-endpoint/upload";
@@ -30,8 +40,8 @@ public class MintGameScoreNFT : MonoBehaviour
         // Create the metadata for the NFT
         Metadata metadata = new Metadata()
         {
-            name = "Game Score NFT",
-            symbol = "GSN",
+            name = "Solana Scroller Score",
+            symbol = "SolScroll",
             uri = await UploadMetadataToServer(),
             sellerFeeBasisPoints = 0,
             creators = new List<Creator> { new Creator(walletManager.GetPublicKey(), 100, true) }
@@ -76,7 +86,60 @@ public class MintGameScoreNFT : MonoBehaviour
 
     private async Task Mint(Metadata metadata)
     {
-        // TODO: Implement the minting code similar to your provided example using metadata as the NFT's metadata
+        var mint = walletManager.wallet.Account;
+
+        Task<RequestResult<ResponseValue<LatestBlockHash>>> blockHash = rpcClient.GetLatestBlockHashAsync();
+        var associatedTokenAccount = AssociatedTokenAccountProgram.DeriveAssociatedTokenAccount(Web3.Account, walletManager.wallet.Account.PublicKey);
+        var transaction = new TransactionBuilder()
+            .SetRecentBlockHash(blockHash.ToString())
+            .SetFeePayer(Web3.Account)
+            .AddInstruction(
+                SystemProgram.CreateAccount(
+                    Web3.Account,
+                    mint.PublicKey,
+                    (ulong).002f,
+                    TokenProgram.MintAccountDataSize,
+                    TokenProgram.ProgramIdKey))
+            .AddInstruction(
+                TokenProgram.InitializeMint(
+                    mint.PublicKey,
+                    0,
+                    Web3.Account,
+                    Web3.Account))
+            .AddInstruction(
+                AssociatedTokenAccountProgram.CreateAssociatedTokenAccount(
+                    Web3.Account,
+                    Web3.Account,
+                    mint.PublicKey))
+            .AddInstruction(
+                TokenProgram.MintTo(
+                    mint.PublicKey,
+                    associatedTokenAccount,
+                    1,
+                    Web3.Account))
+            .AddInstruction(MetadataProgram.CreateMetadataAccount(
+                PDALookup.FindMetadataPDA(mint), 
+                mint.PublicKey, 
+                Web3.Account, 
+                Web3.Account, 
+                Web3.Account.PublicKey, 
+                metadata,
+                TokenStandard.NonFungible, 
+                true, 
+                true, 
+                null,
+                metadataVersion: MetadataVersion.V3))
+            .AddInstruction(MetadataProgram.CreateMasterEdition(
+                    maxSupply: null,
+                    masterEditionKey: PDALookup.FindMasterEditionPDA(mint),
+                    mintKey: mint,
+                    updateAuthorityKey: Web3.Account,
+                    mintAuthority: Web3.Account,
+                    payer: Web3.Account,
+                    metadataKey: PDALookup.FindMetadataPDA(mint),
+                    version: CreateMasterEditionVersion.V3
+                )
+            );
     }
     
     [System.Serializable]

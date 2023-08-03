@@ -14,7 +14,7 @@ using UnityEngine;
 
 public class SolanaWalletManager : MonoBehaviour
 {
-    private Wallet wallet;
+    public Wallet wallet;
     private IRpcClient rpcClient;
     private const string MnemonicKey = "MNEMONIC";
     private const string PrivateKeyKey = "PRIVATEKEY";

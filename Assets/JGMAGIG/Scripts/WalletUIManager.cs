@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 public class WalletUIManager : MonoBehaviour
 {
-    public Text publicKeyText;
+    public InputField publicKeyText;
     public InputField privateKeyField;
     public Button toggleShowHideButton;
     public InputField recipientAddressField;
@@ -17,10 +17,11 @@ public class WalletUIManager : MonoBehaviour
     void Start()
     {
         // Initialize the SolanaWalletManager here.
-        walletManager = new SolanaWalletManager();
+        walletManager = FindObjectOfType<SolanaWalletManager>();
 
         // Display public key.
         publicKeyText.text = walletManager.GetPublicKey();
+        publicKeyText.ForceLabelUpdate();
 
         // Display (hidden) private key.
         privateKeyField.text = walletManager.GetPrivateKey();
