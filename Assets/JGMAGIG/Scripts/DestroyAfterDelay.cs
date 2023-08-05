@@ -37,7 +37,7 @@ public class DestroyAfterDelay : MonoBehaviour
         {
             gameObject.GetComponent<Collider2D>().enabled = false;
             gameObject.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezeAll; 
-            Debug.Log("Collided with ground or obstacle - Enter!");
+            // Debug.Log("Collided with ground or obstacle - Enter!");
         }
     }
     private void OnCollisionExit2D(Collision2D col)
@@ -46,7 +46,7 @@ public class DestroyAfterDelay : MonoBehaviour
         {
             gameObject.GetComponent<Collider2D>().enabled = true;
             gameObject.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.None;
-            Debug.Log("Collided with ground or obstacle - Exit!");
+            // Debug.Log("Collided with ground or obstacle - Exit!");
         }
     }
     

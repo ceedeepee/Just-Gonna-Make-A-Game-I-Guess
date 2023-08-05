@@ -16,6 +16,7 @@ using Solana.Unity.Rpc.Core.Http;
 using Solana.Unity.Rpc.Messages;
 using Solana.Unity.Rpc.Models;
 using Solana.Unity.SDK;
+using Solana.Unity.Wallet;
 
 public class MintGameScoreNFT : MonoBehaviour
 {
@@ -24,7 +25,7 @@ public class MintGameScoreNFT : MonoBehaviour
     
     // Player controller reference
     public PlayerController playerController;
-    private static readonly IRpcClient rpcClient = ClientFactory.GetClient(Cluster.MainNet);
+    private static readonly IRpcClient rpcClient = ClientFactory.GetClient("");
 
     // Server endpoint for metadata upload
     private string serverUploadEndpoint = "https://your-server-endpoint/upload";
@@ -34,6 +35,7 @@ public class MintGameScoreNFT : MonoBehaviour
         // Check if the player has approved the NFT minting.
         if (!playerController.gameOver)
         {
+            Debug.Log("Game is not over yet, cannot mint NFT.");
             return;
         }
         
@@ -44,9 +46,10 @@ public class MintGameScoreNFT : MonoBehaviour
             symbol = "SolScroll",
             uri = await UploadMetadataToServer(),
             sellerFeeBasisPoints = 0,
-            creators = new List<Creator> { new Creator(walletManager.GetPublicKey(), 100, true) }
+            creators = new List<Creator> { new Creator(walletManager.wallet.Account.PublicKey, 100, true) }
         };
-        
+        Debug.Log($"Minting NFT with metadata: {JsonUtility.ToJson(metadata)}");
+
         // Call the minting function
         await Mint(metadata);
     }
@@ -61,20 +64,20 @@ public class MintGameScoreNFT : MonoBehaviour
 
         using (HttpClient client = new HttpClient())
         {
-            var response = await client.PostAsync(serverUploadEndpoint, content);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var responseContent = await response.Content.ReadAsStringAsync();
-                UUIDResponse uuidResponse = JsonUtility.FromJson<UUIDResponse>(responseContent);
-                
-                // Return the UUID from the server response
-                return uuidResponse.uuid;
-            }
-            else
-            {
-                throw new Exception($"Failed to upload metadata to the server. Status code: {response.StatusCode}");
-            }
+// //            var response = await client.PostAsync(serverUploadEndpoint, content);
+//
+//             if (response.IsSuccessStatusCode)
+//             {
+//                 var responseContent = await response.Content.ReadAsStringAsync();
+//                 UUIDResponse uuidResponse = JsonUtility.FromJson<UUIDResponse>(responseContent);
+//                 
+//                 // Return the UUID from the server response
+                return "uuidResponse.uuid";
+            // }
+            // else
+            // {
+            //     throw new Exception($"Failed to upload metadata to the server. Status code: {response.StatusCode}");
+            // }
         }
     }
 
@@ -86,43 +89,50 @@ public class MintGameScoreNFT : MonoBehaviour
 
     private async Task Mint(Metadata metadata)
     {
-        var mint = walletManager.wallet.Account;
 
-        Task<RequestResult<ResponseValue<LatestBlockHash>>> blockHash = rpcClient.GetLatestBlockHashAsync();
-        var associatedTokenAccount = AssociatedTokenAccountProgram.DeriveAssociatedTokenAccount(Web3.Account, walletManager.wallet.Account.PublicKey);
+        Debug.Log("Starting Minting NFT...");
+        var mint = new Account();
+        Debug.Log($"newMint: {mint.PublicKey}");
+        var blockHashResult = await rpcClient.GetLatestBlockHashAsync();
+        var minimumRentResult = await rpcClient.GetMinimumBalanceForRentExemptionAsync(679);
+        var minimumRent = minimumRentResult.Result;
+        Debug.Log($"Block hash: {blockHashResult.Result.Value.Blockhash}, minimum rent: {minimumRent}");
+        var associatedTokenAccount = AssociatedTokenAccountProgram.DeriveAssociatedTokenAccount(walletManager.wallet.Account.PublicKey, mint.PublicKey);
+        Debug.Log($"Associated token account: {associatedTokenAccount}");
+
         var transaction = new TransactionBuilder()
-            .SetRecentBlockHash(blockHash.ToString())
-            .SetFeePayer(Web3.Account)
+            .SetRecentBlockHash(blockHashResult.ToString())
+            .SetFeePayer(walletManager.wallet.Account.PublicKey)
             .AddInstruction(
                 SystemProgram.CreateAccount(
-                    Web3.Account,
+                    walletManager.wallet.Account.PublicKey,
                     mint.PublicKey,
-                    (ulong).002f,
+                    minimumRent,
                     TokenProgram.MintAccountDataSize,
                     TokenProgram.ProgramIdKey))
             .AddInstruction(
                 TokenProgram.InitializeMint(
                     mint.PublicKey,
                     0,
-                    Web3.Account,
-                    Web3.Account))
+                    walletManager.wallet.Account.PublicKey,
+                    walletManager.wallet.Account.PublicKey))
             .AddInstruction(
                 AssociatedTokenAccountProgram.CreateAssociatedTokenAccount(
-                    Web3.Account,
-                    Web3.Account,
+                    walletManager.wallet.Account.PublicKey,
+                    walletManager.wallet.Account.PublicKey,
                     mint.PublicKey))
             .AddInstruction(
                 TokenProgram.MintTo(
                     mint.PublicKey,
                     associatedTokenAccount,
                     1,
-                    Web3.Account))
+                    walletManager.wallet.Account.PublicKey))
             .AddInstruction(MetadataProgram.CreateMetadataAccount(
                 PDALookup.FindMetadataPDA(mint), 
                 mint.PublicKey, 
-                Web3.Account, 
-                Web3.Account, 
-                Web3.Account.PublicKey, 
+                walletManager.wallet.Account.PublicKey, 
+                walletManager.wallet.Account.PublicKey, 
+                walletManager.wallet.Account.PublicKey, 
                 metadata,
                 TokenStandard.NonFungible, 
                 true, 
@@ -133,37 +143,40 @@ public class MintGameScoreNFT : MonoBehaviour
                     maxSupply: null,
                     masterEditionKey: PDALookup.FindMasterEditionPDA(mint),
                     mintKey: mint,
-                    updateAuthorityKey: Web3.Account,
-                    mintAuthority: Web3.Account,
-                    payer: Web3.Account,
+                    updateAuthorityKey: walletManager.wallet.Account.PublicKey,
+                    mintAuthority: walletManager.wallet.Account.PublicKey,
+                    payer: walletManager.wallet.Account.PublicKey,
                     metadataKey: PDALookup.FindMetadataPDA(mint),
                     version: CreateMasterEditionVersion.V3
                 )
             );
+
+
+        Debug.Log("Minting NFT...");
     }
     
-    [System.Serializable]
-    public class Metadata
-    {
-        public string name;
-        public string symbol;
-        public string uri;
-        public int sellerFeeBasisPoints;
-        public List<Creator> creators;
-    }
-
-    [System.Serializable]
-    public class Creator
-    {
-        public string address;
-        public int share;
-        public bool verified;
-
-        public Creator(string address, int share, bool verified)
-        {
-            this.address = address;
-            this.share = share;
-            this.verified = verified;
-        }
-    }
+    // [System.Serializable]
+    // // public class Metadata
+    // // {
+    // //     public string name;
+    // //     public string symbol;
+    // //     public string uri;
+    // //     public int sellerFeeBasisPoints;
+    // //     public List<Creator> creators;
+    // // }
+    //
+    // [System.Serializable]
+    // public class Creator
+    // {
+    //     public string address;
+    //     public int share;
+    //     public bool verified;
+    //
+    //     public Creator(string address, int share, bool verified)
+    //     {
+    //         this.address = address;
+    //         this.share = share;
+    //         this.verified = verified;
+    //     }
+    // }
 }
