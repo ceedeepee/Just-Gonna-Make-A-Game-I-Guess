@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/JGMAGIG/Scenes/Running.unity
-    guid: 5d1816d3e3177354b8b1f783aa373930
+    path: Assets/JGMAGIG/Scenes/ScrollerSolanaPlay.unity
+    guid: 93626d15655f72a449d7d83de9277373
   m_configObjects: {}

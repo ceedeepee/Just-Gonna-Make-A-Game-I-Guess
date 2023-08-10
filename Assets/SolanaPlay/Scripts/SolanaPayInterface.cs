@@ -111,7 +111,14 @@ public class SolanaPayInterface : MonoBehaviour
 #endif
     }
     
-
+    private IEnumerator WaitForRealSeconds(float seconds)
+    {
+        DateTime start = DateTime.UtcNow;
+        while ((DateTime.UtcNow - start).TotalSeconds < seconds)
+        {
+            yield return null; // Wait for the next frame
+        }
+    }
     public  SolanaPlayDefinitions.MemberStub memberInfo = new SolanaPlayDefinitions.MemberStub();
     [SerializeField] private Image progressBarFill;
 
@@ -122,8 +129,8 @@ public class SolanaPayInterface : MonoBehaviour
     
     public IEnumerator GetItems(Action<List<SolanaPlayDefinitions.Item>> callback)
     {
-        //Debug.Log(m_hostname + m_api + "/items" + m_platform );
-        var req = new UnityWebRequest(m_hostname + m_api + "/items/" + m_platform, "GET");
+        Debug.Log(m_hostname + m_api + "items/" + m_platform);
+        var req = new UnityWebRequest(m_hostname + m_api + "items/" + m_platform, "GET");
         req.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         yield return req.SendWebRequest();
@@ -209,72 +216,60 @@ public class SolanaPayInterface : MonoBehaviour
             }
         }
     }
-public IEnumerator CheckPaymentStatus(string qrRefId)
-{
-    int retryCount = 0;
-    const int maxRetries = 5;
-
-    yield return new WaitForSeconds(5);
-
-    while (true)
+    public IEnumerator CheckPaymentStatus(string qrRefId)
     {
-        //Debug.Log($"[CheckPaymentStatus] Attempt number: {retryCount + 1}");
-        string url = m_hostname + m_api + "/orders/status/" + qrRefId;
+        int retryCount = 0;
+        const int maxRetries = 5;
 
-        //Debug.Log($"[CheckPaymentStatus] Sending request to URL: {url}");
-        UnityWebRequest request = UnityWebRequest.Get(url);
-        yield return request.SendWebRequest();
+        yield return WaitForRealSeconds(5);
 
-        if (request.result == UnityWebRequest.Result.Success)
+        while (true)
         {
-            retryCount++;
-            //Debug.Log($"[CheckPaymentStatus] Received response: {request.downloadHandler.text}");
+            string url = m_hostname + m_api + "/orders/status/" + qrRefId;
 
-            PaymentStatusResponse statusResponse = JsonConvert.DeserializeObject<PaymentStatusResponse>(request.downloadHandler.text);
-            OnTransactionStatusChanged?.Invoke(statusResponse);
+            UnityWebRequest request = UnityWebRequest.Get(url);
+            yield return request.SendWebRequest();
 
-            if (statusResponse.confirmed)
+            if (request.result == UnityWebRequest.Result.Success)
             {
-                //Debug.Log($"[CheckPaymentStatus] Payment confirmed! Transaction Signature: {statusResponse.txSignature}");
-                popup.SetActive(true);
-                StartCoroutine(HidePopupAfterDelay(10f));
-                break;
+                retryCount++;
+                Debug.Log($"[CheckPaymentStatus] Received response: {request.downloadHandler.text}");
+
+                PaymentStatusResponse statusResponse = JsonConvert.DeserializeObject<PaymentStatusResponse>(request.downloadHandler.text);
+                OnTransactionStatusChanged?.Invoke(statusResponse);
+
+                if (statusResponse.confirmed)
+                {
+                    popup.SetActive(true);
+                    StartCoroutine(HidePopupAfterDelay(10f));
+                    break;
+                }
+                else
+                {
+                    
+                    //yield return WaitForRealSeconds(5f);
+                    //popup.SetActive(true);
+                }
             }
             else
             {
-                //Debug.Log($"[CheckPaymentStatus] Response successful but payment not confirmed. Message: {statusResponse.message}");
-                yield return new WaitForSeconds(5f);
-                popup.SetActive(true);
-            }
-        }
-        else
-        {
-            //Debug.LogError($"[CheckPaymentStatus] Error received: {request.downloadHandler.text}");
-
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(request.downloadHandler.text);
-            if (errorResponse.error.message.Contains("Order not yet created"))
-            {
-                retryCount++;
-                if (retryCount > maxRetries)
+                ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(request.downloadHandler.text);
+                if (errorResponse.error.message.Contains("Order not yet created"))
                 {
-                    //Debug.LogError($"[CheckPaymentStatus] Maximum retry attempts ({maxRetries}) reached. Stopping payment checks.");
-                    break;
+                    retryCount++;
+                    if (retryCount > maxRetries)
+                    {
+                        break;
+                    }
+                    yield return WaitForRealSeconds(1);
+                    continue;
                 }
-                //Debug.LogWarning("[CheckPaymentStatus] Order not yet created. Retrying in 1 second...");
-                yield return new WaitForSeconds(1);
-                continue;
+                break;
             }
 
-            //Debug.LogError($"[CheckPaymentStatus] Error checking payment status: {errorResponse.error.message}");
-            break;
+            yield return WaitForRealSeconds(1);
         }
-
-        //Debug.Log("[CheckPaymentStatus] Waiting 1 second before next check...");
-        yield return new WaitForSeconds(1);
     }
-
-    //Debug.Log("[CheckPaymentStatus] Exiting CheckPaymentStatus Coroutine.");
-}
 
 
 IEnumerator HidePopupAfterDelay(float delay)
