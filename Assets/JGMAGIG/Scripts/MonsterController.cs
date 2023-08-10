@@ -23,6 +23,12 @@ public class MonsterController : MonoBehaviour
 
     void FixedUpdate()
     {
+        // Check if the game has started in the PlayerController
+        if (!playerController.gameStarted)
+        {
+            return;  // Exit the FixedUpdate if game hasn't started yet
+        }
+
         // If the player is stuck.
         if(player.position.x == lastPlayerX)
         {

@@ -16,7 +16,7 @@ public class PlayerController : MonoBehaviour
     public GameObject projectilePrefab;
     public float projectileSpeed = 20f; 
     public bool gameOver = false;  // Add this line
-    private bool gameStarted = false;
+    public bool gameStarted = false;
     private float lastTimeMoving;
     public TMP_Text deathReasonText;  // Assign this in the inspector
     private Vector3 lastPosition;
@@ -30,6 +30,20 @@ public class PlayerController : MonoBehaviour
     public AudioClip gunshot, jumpSound, landSound;
     public AudioSource audioSource;
     public GameObject fullscreenText;
+    public bool hasTripleShot = false;
+    public bool hasShield = false;
+    public bool shieldActive = false;
+    public GameObject shieldUI;  // Assign this in the inspector
+    public Image shieldBar;  // Assign this in the inspector
+    private float shieldDuration = 5f;
+    private float shieldRechargeTime = 10f;
+    private float shieldCooldown = 0f;
+    
+    public void EnableShield()
+    {
+        hasShield = true;
+    }
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -37,6 +51,10 @@ public class PlayerController : MonoBehaviour
         gameStarted = false;
         deathReason = ""; 
         lastPosition = transform.position;
+    }
+    public void EnableTripleShot()
+    {
+        hasTripleShot = true;
     }
 
     void CheckGameOver()
@@ -108,6 +126,10 @@ public class PlayerController : MonoBehaviour
                 {
                     ShootProjectile();
                 }
+                if (hasShield && Input.GetKeyDown(KeyCode.G) && !shieldActive && shieldCooldown <= 0)
+                {
+                    StartCoroutine(ActivateShield());
+                }
 
                 CheckGameOver();
 
@@ -126,6 +148,64 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
+
+    public GameObject shieldDisplay, shieldDisplayCooldown;
+    private bool shieldOnCooldown = false;
+
+    private IEnumerator ActivateShield()
+    {
+        if (shieldOnCooldown || shieldActive)
+        {
+            // If the shield is still on cooldown or already active, exit.
+            yield break;
+        }
+
+        shieldActive = true;
+        shieldDisplay.SetActive(true);
+        shieldUI.SetActive(true);
+    
+        float elapsed = 0;
+        while (elapsed < shieldDuration)
+        {
+            elapsed += Time.deltaTime;
+            shieldBar.fillAmount = 1f - (elapsed / shieldDuration);
+            yield return null;
+        }
+
+        shieldActive = false;
+        shieldDisplay.SetActive(false);
+        // shieldUI.SetActive(false);
+        // shieldDisplayCooldown.SetActive(true);
+        // Now start the cooldown logic
+        StartShieldCooldown();
+    }
+public void StartGame()
+    {
+        gameStarted = true;
+        //fullscreenText.SetActive(false);
+    }
+    private void StartShieldCooldown()
+    {
+        shieldOnCooldown = true;
+        shieldCooldown = shieldRechargeTime;
+    
+        StartCoroutine(ShieldCooldownRoutine());
+    }
+
+    private IEnumerator ShieldCooldownRoutine()
+    {
+        float elapsed = 0;
+        while (elapsed < shieldCooldown)
+        {
+            elapsed += Time.deltaTime;
+            shieldBar.fillAmount = elapsed / shieldCooldown;
+            yield return null;
+        }
+
+        shieldOnCooldown = false;
+        // shieldDisplayCooldown.SetActive(false);
+    }
+
     public float DistanceTraveled()
     {
         return transform.position.x;  // Assumes the player starts at x=0
@@ -151,32 +231,50 @@ public class PlayerController : MonoBehaviour
     public void ShootProjectile()
     {
         audioSource.PlayOneShot(gunshot);
-        // Instantiate the projectile Prefab at the player's location and add a forward force to its Rigidbody2D
-        GameObject projectile = Instantiate(projectilePrefab, barrel.position, Quaternion.identity);
-        Rigidbody2D projectileRb = projectile.GetComponent<Rigidbody2D>();
-        projectileRb.AddForce(new Vector2(projectileSpeed, 0f), ForceMode2D.Impulse);
+    
+        // Regular shot
+        ShootInDirection(Vector2.right);
+
+        if (hasTripleShot)
+        {
+            // Upper shot (30 degrees up)
+            ShootInDirection(Quaternion.Euler(0, 0, 30) * Vector2.right);
+            // Lower shot (30 degrees down)
+            ShootInDirection(Quaternion.Euler(0, 0, -30) * Vector2.right);
+        }
     }
+
+    private void ShootInDirection(Vector2 direction)
+    {
+        Quaternion rotation = Quaternion.LookRotation(Vector3.forward, direction);
+        GameObject projectile = Instantiate(projectilePrefab, barrel.position, rotation);
+        Rigidbody2D projectileRb = projectile.GetComponent<Rigidbody2D>();
+        projectileRb.AddForce(direction * projectileSpeed, ForceMode2D.Impulse);
+    }
+
 
     // Detect when the player lands after a jump
     void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Ground"))  // Assumes you have a "Ground" tag on your ground objects
+        if (collision.gameObject.CompareTag("Ground")) // Assumes you have a "Ground" tag on your ground objects
         {
             isJumping = false;
             canDoubleJump = true;
             //audioSource.PlayOneShot(landSound);
         }
+
+        if (shieldActive) return;
         if (collision.gameObject.CompareTag("EnemyProjectile"))
         {
             deathReason = "Hit by an enemy projectile!";
             gameOver = true;
-            
+
         }
         else if (collision.gameObject.CompareTag("Obstacle"))
         {
             deathReason = "Collided with an obstacle!";
             gameOver = true;
-            
+
         }
     }    
     private bool IsPointerOverUIObject()

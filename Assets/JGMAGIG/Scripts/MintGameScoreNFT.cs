@@ -7,25 +7,25 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Runtime.Serialization.Json;
 using System.Text;
-using Solana.Unity.Metaplex.NFT.Library;
-using Solana.Unity.Metaplex.Utilities;
-using Solana.Unity.Programs;
-using Solana.Unity.Rpc;
-using Solana.Unity.Rpc.Builders;
-using Solana.Unity.Rpc.Core.Http;
-using Solana.Unity.Rpc.Messages;
-using Solana.Unity.Rpc.Models;
-using Solana.Unity.SDK;
-using Solana.Unity.Wallet;
+// using Solana.Unity.Metaplex.NFT.Library;
+// using Solana.Unity.Metaplex.Utilities;
+// using Solana.Unity.Programs;
+// using Solana.Unity.Rpc;
+// using Solana.Unity.Rpc.Builders;
+// using Solana.Unity.Rpc.Core.Http;
+// using Solana.Unity.Rpc.Messages;
+// using Solana.Unity.Rpc.Models;
+// using Solana.Unity.SDK;
+// using Solana.Unity.Wallet;
 
 public class MintGameScoreNFT : MonoBehaviour
 {
     // Wallet manager reference
-    public SolanaWalletManager walletManager;
+    // public SolanaWalletManager walletManager;
     
     // Player controller reference
     public PlayerController playerController;
-    private static readonly IRpcClient rpcClient = ClientFactory.GetClient("");
+    // private static readonly IRpcClient rpcClient = ClientFactory.GetClient("");
 
     // Server endpoint for metadata upload
     private string serverUploadEndpoint = "https://your-server-endpoint/upload";
@@ -40,18 +40,18 @@ public class MintGameScoreNFT : MonoBehaviour
         }
         
         // Create the metadata for the NFT
-        Metadata metadata = new Metadata()
-        {
-            name = "Solana Scroller Score",
-            symbol = "SolScroll",
-            uri = await UploadMetadataToServer(),
-            sellerFeeBasisPoints = 0,
-            creators = new List<Creator> { new Creator(walletManager.wallet.Account.PublicKey, 100, true) }
-        };
-        Debug.Log($"Minting NFT with metadata: {JsonUtility.ToJson(metadata)}");
-
-        // Call the minting function
-        await Mint(metadata);
+        // Metadata metadata = new Metadata()
+        // {
+        //     name = "Solana Scroller Score",
+        //     symbol = "SolScroll",
+        //     uri = await UploadMetadataToServer(),
+        //     sellerFeeBasisPoints = 0,
+        //     creators = new List<Creator> { new Creator(walletManager.wallet.Account.PublicKey, 100, true) }
+        // };
+        // Debug.Log($"Minting NFT with metadata: {JsonUtility.ToJson(metadata)}");
+        //
+        // // Call the minting function
+        // await Mint(metadata);
     }
     
     private async Task<string> UploadMetadataToServer()
@@ -87,73 +87,73 @@ public class MintGameScoreNFT : MonoBehaviour
         public string uuid;
     }
 
-    private async Task Mint(Metadata metadata)
-    {
-
-        Debug.Log("Starting Minting NFT...");
-        var mint = new Account();
-        Debug.Log($"newMint: {mint.PublicKey}");
-        var blockHashResult = await rpcClient.GetLatestBlockHashAsync();
-        var minimumRentResult = await rpcClient.GetMinimumBalanceForRentExemptionAsync(679);
-        var minimumRent = minimumRentResult.Result;
-        Debug.Log($"Block hash: {blockHashResult.Result.Value.Blockhash}, minimum rent: {minimumRent}");
-        var associatedTokenAccount = AssociatedTokenAccountProgram.DeriveAssociatedTokenAccount(walletManager.wallet.Account.PublicKey, mint.PublicKey);
-        Debug.Log($"Associated token account: {associatedTokenAccount}");
-
-        var transaction = new TransactionBuilder()
-            .SetRecentBlockHash(blockHashResult.ToString())
-            .SetFeePayer(walletManager.wallet.Account.PublicKey)
-            .AddInstruction(
-                SystemProgram.CreateAccount(
-                    walletManager.wallet.Account.PublicKey,
-                    mint.PublicKey,
-                    minimumRent,
-                    TokenProgram.MintAccountDataSize,
-                    TokenProgram.ProgramIdKey))
-            .AddInstruction(
-                TokenProgram.InitializeMint(
-                    mint.PublicKey,
-                    0,
-                    walletManager.wallet.Account.PublicKey,
-                    walletManager.wallet.Account.PublicKey))
-            .AddInstruction(
-                AssociatedTokenAccountProgram.CreateAssociatedTokenAccount(
-                    walletManager.wallet.Account.PublicKey,
-                    walletManager.wallet.Account.PublicKey,
-                    mint.PublicKey))
-            .AddInstruction(
-                TokenProgram.MintTo(
-                    mint.PublicKey,
-                    associatedTokenAccount,
-                    1,
-                    walletManager.wallet.Account.PublicKey))
-            .AddInstruction(MetadataProgram.CreateMetadataAccount(
-                PDALookup.FindMetadataPDA(mint), 
-                mint.PublicKey, 
-                walletManager.wallet.Account.PublicKey, 
-                walletManager.wallet.Account.PublicKey, 
-                walletManager.wallet.Account.PublicKey, 
-                metadata,
-                TokenStandard.NonFungible, 
-                true, 
-                true, 
-                null,
-                metadataVersion: MetadataVersion.V3))
-            .AddInstruction(MetadataProgram.CreateMasterEdition(
-                    maxSupply: null,
-                    masterEditionKey: PDALookup.FindMasterEditionPDA(mint),
-                    mintKey: mint,
-                    updateAuthorityKey: walletManager.wallet.Account.PublicKey,
-                    mintAuthority: walletManager.wallet.Account.PublicKey,
-                    payer: walletManager.wallet.Account.PublicKey,
-                    metadataKey: PDALookup.FindMetadataPDA(mint),
-                    version: CreateMasterEditionVersion.V3
-                )
-            );
-
-
-        Debug.Log("Minting NFT...");
-    }
+    // private async Task Mint(Metadata metadata)
+    // {
+    //
+    //     Debug.Log("Starting Minting NFT...");
+    //     var mint = new Account();
+    //     Debug.Log($"newMint: {mint.PublicKey}");
+    //     var blockHashResult = await rpcClient.GetLatestBlockHashAsync();
+    //     var minimumRentResult = await rpcClient.GetMinimumBalanceForRentExemptionAsync(679);
+    //     var minimumRent = minimumRentResult.Result;
+    //     Debug.Log($"Block hash: {blockHashResult.Result.Value.Blockhash}, minimum rent: {minimumRent}");
+    //     var associatedTokenAccount = AssociatedTokenAccountProgram.DeriveAssociatedTokenAccount(walletManager.wallet.Account.PublicKey, mint.PublicKey);
+    //     Debug.Log($"Associated token account: {associatedTokenAccount}");
+    //
+    //     var transaction = new TransactionBuilder()
+    //         .SetRecentBlockHash(blockHashResult.ToString())
+    //         .SetFeePayer(walletManager.wallet.Account.PublicKey)
+    //         .AddInstruction(
+    //             SystemProgram.CreateAccount(
+    //                 walletManager.wallet.Account.PublicKey,
+    //                 mint.PublicKey,
+    //                 minimumRent,
+    //                 TokenProgram.MintAccountDataSize,
+    //                 TokenProgram.ProgramIdKey))
+    //         .AddInstruction(
+    //             TokenProgram.InitializeMint(
+    //                 mint.PublicKey,
+    //                 0,
+    //                 walletManager.wallet.Account.PublicKey,
+    //                 walletManager.wallet.Account.PublicKey))
+    //         .AddInstruction(
+    //             AssociatedTokenAccountProgram.CreateAssociatedTokenAccount(
+    //                 walletManager.wallet.Account.PublicKey,
+    //                 walletManager.wallet.Account.PublicKey,
+    //                 mint.PublicKey))
+    //         .AddInstruction(
+    //             TokenProgram.MintTo(
+    //                 mint.PublicKey,
+    //                 associatedTokenAccount,
+    //                 1,
+    //                 walletManager.wallet.Account.PublicKey))
+    //         .AddInstruction(MetadataProgram.CreateMetadataAccount(
+    //             PDALookup.FindMetadataPDA(mint), 
+    //             mint.PublicKey, 
+    //             walletManager.wallet.Account.PublicKey, 
+    //             walletManager.wallet.Account.PublicKey, 
+    //             walletManager.wallet.Account.PublicKey, 
+    //             metadata,
+    //             TokenStandard.NonFungible, 
+    //             true, 
+    //             true, 
+    //             null,
+    //             metadataVersion: MetadataVersion.V3))
+    //         .AddInstruction(MetadataProgram.CreateMasterEdition(
+    //                 maxSupply: null,
+    //                 masterEditionKey: PDALookup.FindMasterEditionPDA(mint),
+    //                 mintKey: mint,
+    //                 updateAuthorityKey: walletManager.wallet.Account.PublicKey,
+    //                 mintAuthority: walletManager.wallet.Account.PublicKey,
+    //                 payer: walletManager.wallet.Account.PublicKey,
+    //                 metadataKey: PDALookup.FindMetadataPDA(mint),
+    //                 version: CreateMasterEditionVersion.V3
+    //             )
+    //         );
+    //
+    //
+    //     Debug.Log("Minting NFT...");
+    // }
     
     // [System.Serializable]
     // // public class Metadata
