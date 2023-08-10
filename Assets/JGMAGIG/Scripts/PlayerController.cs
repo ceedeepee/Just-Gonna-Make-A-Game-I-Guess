@@ -29,6 +29,7 @@ public class PlayerController : MonoBehaviour
     public TMP_Text hudScureText;
     public AudioClip gunshot, jumpSound, landSound;
     public AudioSource audioSource;
+    public GameObject fullscreenText;
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -71,54 +72,58 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        if (!gameOver)
+        if (gameStarted)
         {
-            distanceTraveled = transform.position.x;
-            if ((transform.position - lastPosition).magnitude > 0.01f)
+            if (!gameOver)
             {
-                lastTimeMoving = Time.time;
-            }
-        
-            lastPosition = transform.position;
-            rb.velocity = new Vector2(speed, rb.velocity.y);
-
-            if ((Input.GetKeyDown(KeyCode.Space) || (Input.GetMouseButtonDown(0) && !IsPointerOverUIObject())) && (!isJumping || canDoubleJump))
-            {
-                audioSource.PlayOneShot(jumpSound);
-                gameStarted = true;
-                if (isJumping && canDoubleJump)
+                distanceTraveled = transform.position.x;
+                if ((transform.position - lastPosition).magnitude > 0.01f)
                 {
-                    canDoubleJump = false;
+                    lastTimeMoving = Time.time;
                 }
 
-                rb.AddForce(new Vector2(0f, jumpForce), ForceMode2D.Impulse);
-                isJumping = true;
-                animator.SetBool("jump", true);
+                lastPosition = transform.position;
+                rb.velocity = new Vector2(speed, rb.velocity.y);
+
+                if ((Input.GetKeyDown(KeyCode.Space) || (Input.GetMouseButtonDown(0) && !IsPointerOverUIObject())) &&
+                    (!isJumping || canDoubleJump))
+                {
+                    audioSource.PlayOneShot(jumpSound);
+                    if (isJumping && canDoubleJump)
+                    {
+                        canDoubleJump = false;
+                    }
+
+                    rb.AddForce(new Vector2(0f, jumpForce), ForceMode2D.Impulse);
+                    isJumping = true;
+                    animator.SetBool("jump", true);
+                }
+                else if (Mathf.Abs(rb.velocity.y) < 0.01f)
+                {
+                    animator.SetBool("walk", true);
+                    animator.SetBool("jump", false);
+                }
+
+                if (Input.GetKeyDown(KeyCode.F))
+                {
+                    ShootProjectile();
+                }
+
+                CheckGameOver();
+
+                IncreaseSpeedOverTime();
+                hudScureText.text = "Score: " + objectsBlownUp.ToString();
+                distanceText.text = "Distance: " + distanceTraveled.ToString("0.0");
+
             }
-            else if (Mathf.Abs(rb.velocity.y) < 0.01f)
+            else
             {
-                animator.SetBool("walk", true);
-                animator.SetBool("jump", false);
+                rb.velocity = new Vector2(0, 0);
+                gameOverPanel.SetActive(true);
+                fullscreenText.SetActive(false);
+                scoreText.text = "Score: " + DistanceTraveled().ToString("0");
+                deathReasonText.text = "Cause of Death: " + deathReason; // Set the text of the death reason
             }
-            
-            if (Input.GetKeyDown(KeyCode.F))
-            {
-                ShootProjectile();
-            }
-
-            CheckGameOver();
-
-            IncreaseSpeedOverTime();
-            hudScureText.text = "Score: " + objectsBlownUp.ToString();
-            distanceText.text = "Distance: " + distanceTraveled.ToString("0.0");
-
-        }       
-        else
-        {
-            rb.velocity = new Vector2(0, 0);
-            gameOverPanel.SetActive(true);
-            scoreText.text = "Score: " + DistanceTraveled().ToString("0");
-            deathReasonText.text = "Cause of Death: " + deathReason;  // Set the text of the death reason
         }
     }
     public float DistanceTraveled()
